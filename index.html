@@ -1,0 +1,404 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Cilokak Fakultas Teknik</title>
+    <script src="dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var config = {
+    type: Phaser.AUTO,
+    width: 1024, //lebar kanpas
+    height: 560, //tinggi kanpas
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 700 }, //gravity dani
+            debug: false
+        }
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+};
+
+var player;
+var stars;
+var bombs;
+var platforms;
+var cursors;
+var score = 0;
+var gameOver = false;
+var scoreText;
+var kepengSiu;
+var game = new Phaser.Game(config);
+var latarDepan
+var latarTengah
+var latarBelakang 
+var soundback
+var lima;
+var ribut;
+var soundPocong;
+var kepengArr;
+var acakan;
+var acakin;
+var seribu;
+var limeribu;
+var sepuluribu;
+var duepuluribu;
+var seketribu;
+var satusribu;
+function preload ()
+{
+    // background
+    this.load.image('sky', 'assets/abcd.png');
+    this.load.audio('cilokak', 'assets/band.mp3');
+    this.load.image('ground', 'assets/jalanan.png');
+    this.load.image('bomb', 'assets/pocong.png');
+    this.load.image('siuu', 'assets/seribu.png');
+    this.load.image('5iuu', 'assets/limaku.png');
+    this.load.image('10iuu', 'assets/sepulu.png');
+    this.load.image('20iuu', 'assets/duepulu.png');
+    this.load.image('50iuu', 'assets/limapuluh.png');
+    this.load.image('100iuu', 'assets/satus.png');
+    this.load.audio('siu', 'assets/siu.mp3')
+    this.load.audio('5iu', 'assets/5iu.mp3')
+    this.load.audio('10iu', 'assets/10iu.mp3')
+    this.load.audio('20iu', 'assets/20iu.mp3')
+    this.load.audio('50iu', 'assets/50.mp3')
+    this.load.audio('100iu', 'assets/100.mp3')
+    this.load.audio('ribut', 'assets/ribut.mp3')
+    this.load.audio('pocong', 'assets/zombie.mp3')
+    this.load.spritesheet('dude', 'assets/dev.png', { frameWidth: 100, frameHeight: 150 });
+}
+
+// function acakin(){
+//     acakan = Math.floor(Math.random()*5);    
+// }
+
+function create ()
+{
+    // Specify world size
+    this.physics.world.bounds.width = 2000; // note that it is larger than frame size that we've already defined in config
+    soundback = this.sound.add('cilokak');
+    soundback.play();
+    soundPocong = this.sound.add('pocong'); // backsound 2
+    
+    kepengArr = [
+            ['siuu', '5iuu', '10iuu', '20iuu', '50iuu', '100iuu'],
+            ['siu', '5iu', '10iu', '20iu', '50iu', '100iu'],
+            ];
+            
+    acakan = Math.floor(Math.random()*5);
+
+    //  A simple background for our game
+    this.add.image(1025, 250, 'sky');//seandainya dikurangi brrti ke atas
+
+    //  The platforms group contains the ground and the 2 ledges we can jump on
+    platforms = this.physics.add.staticGroup();
+    kepengSiu = this.sound.add(kepengArr[1][0]); 
+    kepeng5iu = this.sound.add(kepengArr[1][1]); 
+    kepeng10iu = this.sound.add(kepengArr[1][2]); 
+    kepeng20iu = this.sound.add(kepengArr[1][3]); 
+    kepeng50iu = this.sound.add(kepengArr[1][4]); 
+    kepeng100iu = this.sound.add(kepengArr[1][5]); 
+    ribut = this.sound.add('ribut');
+    //  Here we create the ground.
+    //  Scale it to fit the width of the game (the original sprite is 400x32 in size)
+    platforms.create(500, 550, 'ground').setScale(1).refreshBody();
+    platforms.create(1200, 550, 'ground').setScale(1).refreshBody();
+    platforms.create(2000, 550, 'ground').setScale(1).refreshBody();
+   
+    
+    //  Now let's create some ledges
+
+    // The player and its settings
+    player = this.physics.add.sprite(118, 225, 'dude');
+
+    //  Player physics properties. Give the little guy a slight bounce.
+    player.setBounce(0.2); //mental
+    player.setCollideWorldBounds(true);
+
+    this.anims.create({
+        key: 'left',
+        frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'turn',
+        frames: [ { key: 'dude', frame: 4 } ],
+        frameRate: 20
+    });
+
+    this.anims.create({
+        key: 'right',
+        frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    //  Input Events
+    cursors = this.input.keyboard.createCursorKeys();
+
+    //  Some stars to collect, 12 in total, evenly spaced 70 pixels apart along the x axis
+    seribu = this.physics.add.group({
+        key: kepengArr[0][0],
+        repeat: 3,//jumlah uang
+        setXY: { x: 20, y: 10, stepX: 230 }//x = lebar ,y= tinggi,stepX = jarak.
+    });
+
+    seribu.children.iterate(function (child) {
+        child.allowGravity = false;
+        child.setCollideWorldBounds(true);
+        child.setVelocity(Phaser.Math.Between(-50, 50), 10);
+        child.setBounce(1); // grafitasi uang
+        child.setBounceY(Phaser.Math.FloatBetween(1, 1));//lompatan uang
+
+    });
+    limeribu = this.physics.add.group({
+        key: kepengArr[0][1],
+        repeat: 3,//jumlah uang
+        setXY: { x: 20, y: 10, stepX: 230 }//x = lebar ,y= tinggi,stepX = jarak.
+    });
+
+    limeribu.children.iterate(function (child) {
+        child.allowGravity = false;
+        child.setCollideWorldBounds(true);
+        child.setVelocity(Phaser.Math.Between(-50, 50), 10);
+        child.setBounce(1); // grafitasi uang
+        child.setBounceY(Phaser.Math.FloatBetween(1, 1));//lompatan uang
+
+    });
+    sepuluribu = this.physics.add.group({
+        key: kepengArr[0][2],
+        repeat: 3,//jumlah uang
+        setXY: { x: 20, y: 10, stepX: 230 }//x = lebar ,y= tinggi,stepX = jarak.
+    });
+
+    sepuluribu.children.iterate(function (child) {
+        child.allowGravity = false;
+        child.setCollideWorldBounds(true);
+        child.setVelocity(Phaser.Math.Between(-50, 50), 10);
+        child.setBounce(1); // grafitasi uang
+        child.setBounceY(Phaser.Math.FloatBetween(1, 1));//lompatan uang
+
+    });
+    duepuluribu = this.physics.add.group({
+        key: kepengArr[0][3],
+        repeat: 3,//jumlah uang
+        setXY: { x: 20, y: 10, stepX: 230 }//x = lebar ,y= tinggi,stepX = jarak.
+    });
+
+    duepuluribu.children.iterate(function (child) {
+        child.allowGravity = false;
+        child.setCollideWorldBounds(true);
+        child.setVelocity(Phaser.Math.Between(-50, 50), 10);
+        child.setBounce(1); // grafitasi uang
+        child.setBounceY(Phaser.Math.FloatBetween(1, 1));//lompatan uang
+
+    });
+    seketribu = this.physics.add.group({
+        key: kepengArr[0][4],
+        repeat: 3,//jumlah uang
+        setXY: { x: 20, y: 10, stepX: 230 }//x = lebar ,y= tinggi,stepX = jarak.
+    });
+
+    seketribu.children.iterate(function (child) {
+        child.allowGravity = false;
+        child.setCollideWorldBounds(true);
+        child.setVelocity(Phaser.Math.Between(-50, 50), 10);
+        child.setBounce(1); // grafitasi uang
+        child.setBounceY(Phaser.Math.FloatBetween(1, 1));//lompatan uang
+
+    });
+
+    satusribu = this.physics.add.group({
+        key: kepengArr[0][5],
+        repeat: 3,//jumlah uang
+        setXY: { x: 20, y: 10, stepX: 230 }//x = lebar ,y= tinggi,stepX = jarak.
+    });
+
+    satusribu.children.iterate(function (child) {
+        child.allowGravity = false;
+        child.setCollideWorldBounds(true);
+        child.setVelocity(Phaser.Math.Between(-50, 50), 10);
+        child.setBounce(1); // grafitasi uang
+        child.setBounceY(Phaser.Math.FloatBetween(1, 1));//lompatan uang
+
+    });
+    
+    bombs = this.physics.add.group();
+
+    //  The score
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#fff' });
+    scoreText.setScrollFactor(0);
+    
+    //  Collide the player and the stars with the platforms
+    this.physics.add.collider(player, platforms);
+    this.physics.add.collider(seribu, platforms);
+    this.physics.add.collider(limeribu, platforms);
+    this.physics.add.collider(sepuluribu, platforms);
+    this.physics.add.collider(duepuluribu, platforms);
+    this.physics.add.collider(seketribu, platforms);
+    this.physics.add.collider(satusribu, platforms);
+    this.physics.add.collider(bombs, platforms);
+
+    //  Checks to see if the player overlaps with any of the stars, if he does call the collectStar function
+    this.physics.add.overlap(player, seribu, collectStar, null, this);
+    this.physics.add.overlap(player, limeribu, collectStar, null, this);
+    this.physics.add.overlap(player, sepuluribu, collectStar, null, this);
+    this.physics.add.overlap(player, duepuluribu, collectStar, null, this);
+    this.physics.add.overlap(player, seketribu, collectStar, null, this);
+    this.physics.add.overlap(player, satusribu, collectStar, null, this);
+
+    this.physics.add.collider(player, bombs, hitBomb, null, this);
+
+    // set bounds so the camera won't go outside the game world
+    this.cameras.main.setBounds(0, 0, 2000, 300);
+    // make the camera follow the player
+    this.cameras.main.startFollow(player);
+}
+
+function update ()
+{
+    if (gameOver)
+    {
+        return;
+    }
+
+    if (cursors.left.isDown)
+    {
+        player.setVelocityX(-160);
+
+        player.anims.play('left', true);
+    }
+    else if (cursors.right.isDown)
+    {
+        player.setVelocityX(160);
+
+        player.anims.play('right', true);
+    }
+    else
+    {
+        player.setVelocityX(0);
+
+        player.anims.play('turn');
+    }
+
+    if (cursors.up.isDown && player.body.touching.down)
+    {
+        player.setVelocityY(-330);
+    }
+}
+
+function collectStar (player, star)
+{
+    star.disableBody(true, true);
+
+    //  Add and update the score
+
+    if (kepengArr[1][0] == star) {
+        kepengSiu.play();
+        score += 1000;
+
+    }else if (kepengArr[1][1] == star) {
+    kepeng5iu.play();
+    score += 5000;
+
+    }else if (kepengArr[1][2] == star) {
+    kepeng10iu.play();
+    score += 10000;
+        
+    }else if (kepengArr[1][3] == star) {
+    kepeng20iu.play();
+    score += 20000;
+
+    }else if (kepengArr[1][4] == star) {
+    kepeng50iu.play();
+    score += 50000;
+        
+    }else{
+    kepeng100iu.play();
+    score += 100000;
+    }
+    // score += 1000;
+    scoreText.setText('Score: ' + score);
+
+    if (seribu.countActive(true) === 0 && limeribu.countActive(true) === 0 && sepuluribu.countActive(true) === 0 && duepuluribu.countActive(true) === 0 && seketribu.countActive(true) === 0 && satusribu.countActive(true) === 0)
+    {
+        //  A new batch of stars to collect
+        // acakin();
+            seribu.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+            soundback.stop();
+            });
+            limeribu.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+            soundback.stop();
+            });
+            sepuluribu.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+            soundback.stop();
+            });
+            duepuluribu.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+            soundback.stop();
+            });
+            seketribu.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+            soundback.stop();
+            });
+            satusribu.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+            soundback.stop();
+            });
+
+        
+        var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+
+        var bomb = bombs.create(x, 16, 'bomb');
+
+        bomb.setBounce(1);
+        bomb.setCollideWorldBounds(true);
+        bomb.setVelocity(Phaser.Math.Between(-400, 400), 20);
+        bomb.allowGravity = false;
+        soundPocong.play();
+        //soundback.play();
+
+    }
+}
+
+function hitBomb (player, bomb)
+{
+    this.physics.pause();
+
+    player.setTint(0xff0000);
+
+    player.anims.play('turn');
+
+    gameOver = true;
+    soundPocong.stop();
+}
+
+</script>
+
+</body>
+</html>
